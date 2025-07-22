@@ -1,15 +1,21 @@
 import base64
+import zlib
 
-# Obfuscated API keys using Base64
-_obfuscated_keys = [
-    "QUl6YVN5Q1hlamtoSnZLTWZKV1laN1pCekVuMnhsRmdZU0poam1r",
-    "QUl6YVN5QVJNN1pKM3BiOXFpVnUyR2tvQTFfaVpMYjR4dy1hR0VJ",
-    "QUl6YVN5QnduRHlKbGVfYkV0c093WEVqWGlONjJ5UnN0LXpHUWs=",
-    "QUl6YVN5QWRabjV4TUNVY0FfVG92RC1sQjM3V2FfampmTzNlTGIw",
-    "QUl6YVN5QzVWRC1kM2xPaTdjaVlqT1dFVEozUzJ2cC0xQ3ZXcHM="
+_KEY = b"SuperSecretKey123"
+
+_chunks = [
+    "eJxTYFUXNkzyEGYJV6/QV0wtT5GR1+QRTOHRkQsTSFPUZyn0","YhDh0jHOCBW0Y1Ct0JKPzg1icXJWl6tTFJU11OZi0ymq906T","1mI01jJj4tAxLeDTKHORU2dTknFI1ebS4jcUFjJzcisz1BLl",
+    "lOCWUZcRMjMyk/CuLsqwMVUSrhOSdmO3EORRYyiOsTByElCx","EokSEHUX5PerSSjSUhOUtxaK45Dnl2E0Uwgridd2l1PgELQP","0bBRZmQ2qXKptJaTYtASkDEQlrflAgAgryXW",
 ]
 
-# Decode API keys
-API_KEYS = [base64.b64decode(k).decode() for k in _obfuscated_keys]
+def _assemble_and_deobfuscate(chunks):
+    full_b64 = "".join(chunks).replace("=", "")  # avoid extra padding
+    padding = '=' * (-len(full_b64) % 4)
+    compressed_data = base64.b64decode(full_b64 + padding)
+    reversed_data = zlib.decompress(compressed_data)
+    decrypted = bytes([b ^ _KEY[i % len(_KEY)] for i, b in enumerate(reversed_data)])
+    return decrypted[::-1].decode()
+
+API_KEYS = _assemble_and_deobfuscate(_chunks).split(";")
 
 __all__ = ['API_KEYS']

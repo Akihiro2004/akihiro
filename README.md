@@ -59,47 +59,6 @@ import akihiro
 akihiro.info()  # Display comprehensive tutorials for all functions
 ```
 
-### 🔑 API Key Configuration
-
-Akihiro supports multiple API keys with automatic fallback when one exceeds usage limits.
-
-```python
-from akihiro import configure_api_keys, get_api_key_status
-
-# Configure your API keys
-configure_api_keys([
-    "your_first_api_key_here",
-    "your_second_api_key_here", 
-    "your_third_api_key_here"
-])
-
-# Check API key status
-status = get_api_key_status()
-print(status)
-```
-
-**Expected Output:**
-```json
-{
-    "total_keys": 3,
-    "current_key_index": 0,
-    "keys_configured": true,
-    "keys": ["AIzaSyDH_7...", "AIzaSyABC...", "AIzaSyXYZ..."]
-}
-```
-
-**Note:** API keys are stored in `akihiro/key.py` for better security and organization. You can either configure them programmatically using `configure_api_keys()` or edit the `key.py` file directly.
-
-**Example key.py file:**
-```python
-# API Keys configuration - Add your API keys here
-API_KEYS = [
-    "your_first_api_key_here",
-    "your_second_api_key_here",
-    "your_third_api_key_here"
-]
-```
-
 ---
 
 ## 📚 Detailed Examples

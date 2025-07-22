@@ -5,6 +5,10 @@ import re
 from typing import Any, List, Dict, Union
 from faker import Faker
 from .key import API_KEYS
+from sumy.parsers.plaintext import PlaintextParser
+from sumy.nlp.tokenizers import Tokenizer
+from sumy.summarizers.text_rank import TextRankSummarizer
+from googletrans import Translator
 
 fake = Faker()
 
@@ -168,16 +172,65 @@ def get_api_key_status():
         "keys": [key[:10] + "..." if key != "YOUR_API_KEY_1_HERE" else "NOT_CONFIGURED" for key in API_KEYS]
     }
 
-def summarizeText(text: str, max_length: int = 100) -> str:
+def summarizeText(text: str, max_length: int = 100, method: str = "auto") -> str:
     if max_length < 1:
         raise ValueError("max_length must be at least 1")
-    
-    prompt = f"Summarize the following text to approximately {max_length} words. Ensure the summary is concise, retains key points, and is grammatically correct:\n\n{text}. Do not add additional text or explanations, just return the summary."
-    return _make_gemini_request(prompt)
 
-def translateText(text: str, target_language: str) -> str:
-    prompt = f"Translate the following text to {target_language}. Ensure the translation is accurate and natural:\n\n{text}. Make sure to only print the result of the translation without any additional text."
-    return _make_gemini_request(prompt)
+    def manual_summary(text, max_length):
+        try:
+            parser = PlaintextParser.from_string(text, Tokenizer("english"))
+            sentences = list(parser.document.sentences)
+            if len(sentences) <= 1:
+                # Fallback: take first N words
+                words = text.split()
+                return " ".join(words[:max_length])
+            summarizer = TextRankSummarizer()
+            n_sentences = max(1, min(len(sentences), max_length // 20))
+            summary = summarizer(parser.document, n_sentences)
+            return " ".join(str(sentence) for sentence in summary)
+        except Exception as e:
+            return None
+
+    if method == "manual":
+        result = manual_summary(text, max_length)
+        if result:
+            return result
+        else:
+            raise Exception("Manual summarization failed. For best results, use longer text with multiple sentences. Manual mode uses the TextRank/PageRank algorithm.")
+    elif method == "llm":
+        prompt = f"Summarize the following text to approximately {max_length} words. Ensure the summary is concise, retains key points, and is grammatically correct:\n\n{text}. Do not add additional text or explanations, just return the summary."
+        return _make_gemini_request(prompt)
+    else:
+        result = manual_summary(text, max_length)
+        if result:
+            return result
+        prompt = f"Summarize the following text to approximately {max_length} words. Ensure the summary is concise, retains key points, and is grammatically correct:\n\n{text}. Do not add additional text or explanations, just return the summary."
+        return _make_gemini_request(prompt)
+
+def translateText(text: str, target_language: str, method: str = "auto") -> str:
+    def manual_translate(text, target_language):
+        try:
+            translator = Translator()
+            result = translator.translate(text, dest=target_language.lower())
+            return result.text
+        except Exception as e:
+            return None
+    
+    if method == "manual":
+        result = manual_translate(text, target_language)
+        if result:
+            return result
+        else:
+            raise Exception("Manual translation failed.")
+    elif method == "llm":
+        prompt = f"Translate the following text to {target_language}. Ensure the translation is accurate and natural:\n\n{text}. Make sure to only print the result of the translation without any additional text."
+        return _make_gemini_request(prompt)
+    else:
+        result = manual_translate(text, target_language)
+        if result:
+            return result
+        prompt = f"Translate the following text to {target_language}. Ensure the translation is accurate and natural:\n\n{text}. Make sure to only print the result of the translation without any additional text."
+        return _make_gemini_request(prompt)
 
 def extractEntities(data: Any) -> List[Dict[str, str]]:
     if isinstance(data, (list, dict)):
