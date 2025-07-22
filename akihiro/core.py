@@ -4,42 +4,29 @@ import os
 import re
 from typing import Any, List, Dict, Union
 from faker import Faker
+from .key import API_KEYS
 
 fake = Faker()
-API_KEYS = [
-    "AIzaSyCXejkhJvKMfJWYZ7ZBzEn2xlFgYSJhjmk",
-    "AIzaSyARM7jZ3pb9qiVu2GkoA1_iZLb4xw-aGEI",
-    "AIzaSyBwnDyXjle_bEtsOwXEjXiN62yRst-vGQk",
-    "AIzaSyAdZn5xMCUcA_TovD-lB37Wa_jfO3QeLr0",
-    "AIzaSyC5VD-d3lOi7ciYjOWETXJ3S2vp-1CvWps"
-]
 
-# Track which API key is currently being used
 current_key_index = 0
 
 def _get_next_api_key():
-    """Get the next available API key, cycling through the list."""
     global current_key_index
     if not API_KEYS:
-        raise ValueError("No API keys configured. Please add your API keys to the API_KEYS list.")
+        raise ValueError("there is a problem with the AI")
     
     key = API_KEYS[current_key_index]
     current_key_index = (current_key_index + 1) % len(API_KEYS)
     return key
 
 def _make_gemini_request(prompt: str) -> str:
-    """Make a request to Gemini API with automatic key fallback."""
     global current_key_index
     
-    # Try each API key until one works
     original_key_index = current_key_index
     attempts = 0
     
     while attempts < len(API_KEYS):
         api_key = _get_next_api_key()
-        
-        if not api_key or api_key == "YOUR_API_KEY_1_HERE":
-            raise ValueError("Please configure your API keys in the API_KEYS list in core.py")
         
         headers = {"Content-Type": "application/json"}
         payload = {"contents": [{"parts": [{"text": prompt}]}]}
@@ -51,12 +38,10 @@ def _make_gemini_request(prompt: str) -> str:
                 data=json.dumps(payload)
             )
             
-            # Check if the request was successful
             if response.status_code == 200:
                 result = response.json()
                 return result.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
             
-            # Check for quota exceeded or rate limit errors
             elif response.status_code in [429, 403]:
                 error_data = response.json()
                 error_message = error_data.get('error', {}).get('message', '').lower()
@@ -79,7 +64,6 @@ def _make_gemini_request(prompt: str) -> str:
         except (KeyError, IndexError, ValueError) as e:
             raise Exception(f"Error processing API response: {str(e)}")
     
-    # If we get here, all keys failed
     raise Exception("All API keys have exceeded their limits or failed. Please check your API keys and try again later.")
 
 def isContext(variable, prompt):    
@@ -96,16 +80,12 @@ def isContext(variable, prompt):
         "Content-Type": "application/json"
     }
     
-    # Use the new API key system
     global current_key_index
     original_key_index = current_key_index
     attempts = 0
     
     while attempts < len(API_KEYS):
         api_key = _get_next_api_key()
-        
-        if not api_key or api_key == "YOUR_API_KEY_1_HERE":
-            raise ValueError("Please configure your API keys in the API_KEYS list in core.py")
         
         try:
             response = requests.post(
@@ -126,7 +106,6 @@ def isContext(variable, prompt):
                 else:
                     raise ValueError(f"Please tell Darrien there is a problem with my AI: {response_text}")
             
-            # Check for quota exceeded or rate limit errors
             elif response.status_code in [429, 403]:
                 error_data = response.json()
                 error_message = error_data.get('error', {}).get('message', '').lower()
@@ -149,7 +128,6 @@ def isContext(variable, prompt):
         except (KeyError, IndexError, ValueError) as e:
             raise Exception(f"Error processing API response: {str(e)}")
     
-    # If we get here, all keys failed
     raise Exception("All API keys have exceeded their limits or failed. Please check your API keys and try again later.")
 
 def configure_api_keys(api_keys: List[str]):
@@ -157,15 +135,30 @@ def configure_api_keys(api_keys: List[str]):
     if not api_keys:
         raise ValueError("Please provide at least one API key")
     
-    # Validate API keys (basic check)
     for i, key in enumerate(api_keys):
         if not key or key.strip() == "":
             raise ValueError(f"API key {i+1} is empty")
         if key == "YOUR_API_KEY_1_HERE":
             raise ValueError(f"Please replace placeholder API key {i+1} with your actual API key")
     
-    API_KEYS = api_keys
-    print(f"✅ Configured {len(api_keys)} API key(s) successfully!")
+    API_KEYS.clear()
+    API_KEYS.extend(api_keys)
+    
+    try:
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        key_file_path = os.path.join(current_dir, 'key.py')
+        
+        if not os.path.exists(key_file_path):
+            key_file_path = os.path.join(os.path.dirname(__file__), 'key.py')
+        
+        with open(key_file_path, 'w') as f:
+            f.write("# API Keys configuration - Add your API keys here\n")
+            f.write("API_KEYS = [\n")
+            for key in api_keys:
+                f.write(f'    "{key}",\n')
+            f.write("]\n")
+    except Exception as e:
+        print(f"⚠️  Warning: Could not update key.py file: {e}")
 
 def get_api_key_status():
     return {
@@ -242,32 +235,24 @@ def extractContext(data: Any, extract_type: str) -> List[str]:
 
 # Data Generation Functions using Faker
 def generate_comment() -> str:
-    """Generate a random comment."""
     return fake.text(max_nb_chars=200)
 
 def generate_email_from_username(username: str) -> str:
-    """Generate an email address from a username."""
     domains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'example.com']
     domain = fake.random_element(domains)
     return f"{username}@{domain}"
 
 def generate_fullname() -> str:
-    """Generate a random full name."""
     return fake.name()
 
 def generate_paragraph(sentences: int = 3) -> str:
-    """Generate a random paragraph with specified number of sentences."""
     return fake.text(max_nb_chars=sentences * 100)
 
 def generate_sentence() -> str:
-    """Generate a random sentence."""
     return fake.sentence()
 
 def generate_username_from_fullname(fullname: str) -> str:
-    """Generate a username from a full name."""
-    # Remove spaces and special characters, convert to lowercase
     username = re.sub(r'[^a-zA-Z0-9]', '', fullname.lower())
-    # Add random numbers if username is too short
     if len(username) < 3:
         username += str(fake.random_number(digits=3))
     return username
@@ -409,22 +394,6 @@ def info():
     print("   for text in texts:")
     print("       sentiment = analyzeSentiment(text)")
     print("       print(f'Sentiment: {sentiment}')")
-    print()
-    
-    print("🔑 API KEY SETUP")
-    print("-" * 50)
-    print("   # Method 1: Configure in code")
-    print("   from akihiro import configure_api_keys")
-    print("   configure_api_keys(['your_api_key_1', 'your_api_key_2'])")
-    print("   ")
-    print("   # Method 2: Edit core.py directly")
-    print("   # Replace the API_KEYS list in akihiro/core.py with your keys")
-    print("   API_KEYS = ['your_key_1', 'your_key_2', 'your_key_3']")
-    print("   ")
-    print("   # Check API key status")
-    print("   from akihiro import get_api_key_status")
-    print("   status = get_api_key_status()")
-    print("   print(status)")
     print()
     
     print("📦 INSTALLATION")

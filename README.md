@@ -88,6 +88,18 @@ print(status)
 }
 ```
 
+**Note:** API keys are stored in `akihiro/key.py` for better security and organization. You can either configure them programmatically using `configure_api_keys()` or edit the `key.py` file directly.
+
+**Example key.py file:**
+```python
+# API Keys configuration - Add your API keys here
+API_KEYS = [
+    "your_first_api_key_here",
+    "your_second_api_key_here",
+    "your_third_api_key_here"
+]
+```
+
 ---
 
 ## 📚 Detailed Examples
