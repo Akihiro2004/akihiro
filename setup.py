@@ -5,9 +5,9 @@ with open('README.md', encoding='utf-8') as f:
 
 setup(
     name='akihiro',
-    version='1.0.1',
+    version='1.1.1',
     packages=find_packages(),
-    install_requires=['requests'],
+    install_requires=['requests', 'faker'],
     author='Darrien Rafael Wijaya',
     author_email='darrienwijaya@gmail.com',
     description='Python package to enhance programming experience with AI LLM capabilities',
